@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import os
-from datetime import datetime
 
 
 # -----------------------------
@@ -46,7 +45,7 @@ def load_data():
 
         df = pd.read_csv(DATA_FILE)
 
-        # Ensure editable columns are text
+        # Convert editable columns to text
         if "Customer Status" in df.columns:
             df["Customer Status"] = (
                 df["Customer Status"]
@@ -65,6 +64,7 @@ def load_data():
 
     else:
         return pd.DataFrame()
+
 
 
 def save_data(df):
@@ -96,6 +96,7 @@ if page == "Admin Upload":
 
     st.title("Admin - Upload Customer File")
 
+
     uploaded_file = st.file_uploader(
         "Upload Customer CSV",
         type=["csv"]
@@ -105,22 +106,6 @@ if page == "Admin Upload":
     if uploaded_file:
 
         df = pd.read_csv(uploaded_file)
-
-
-        # Convert editable fields to text
-        if "Customer Status" in df.columns:
-            df["Customer Status"] = (
-                df["Customer Status"]
-                .fillna("")
-                .astype(str)
-            )
-
-        if "Remarks" in df.columns:
-            df["Remarks"] = (
-                df["Remarks"]
-                .fillna("")
-                .astype(str)
-            )
 
 
         # Add required columns
@@ -133,12 +118,20 @@ if page == "Admin Upload":
             df["Remarks"] = ""
 
 
-        if "Updated By" not in df.columns:
-            df["Updated By"] = ""
+        # Convert editable columns to text
+
+        df["Customer Status"] = (
+            df["Customer Status"]
+            .fillna("")
+            .astype(str)
+        )
 
 
-        if "Updated Date" not in df.columns:
-            df["Updated Date"] = ""
+        df["Remarks"] = (
+            df["Remarks"]
+            .fillna("")
+            .astype(str)
+        )
 
 
         save_data(df)
@@ -152,6 +145,7 @@ if page == "Admin Upload":
         st.dataframe(
             df.head()
         )
+
 
 
 # ==========================================================
@@ -175,13 +169,6 @@ elif page == "User Review":
         st.stop()
 
 
-    # User name
-
-    user_name = st.text_input(
-        "Enter your name"
-    )
-
-
     st.subheader(
         "Update Customer Status and Remarks"
     )
@@ -196,25 +183,22 @@ elif page == "User Review":
         column_config={
 
             "Customer Status":
-
             st.column_config.SelectboxColumn(
-
                 "Customer Status",
-
-                options=STATUS_OPTIONS
-
+                options=STATUS_OPTIONS,
+                required=False
             ),
 
 
             "Remarks":
-
             st.column_config.TextColumn(
-
                 "Remarks"
-
             )
 
         },
+
+
+        # Only these columns are editable
 
         disabled=[
             col for col in df.columns
@@ -224,6 +208,7 @@ elif page == "User Review":
             ]
         ],
 
+
         num_rows="fixed"
 
     )
@@ -232,55 +217,14 @@ elif page == "User Review":
     if st.button("Save Changes"):
 
 
-        if user_name.strip() == "":
-
-            st.error(
-                "Please enter your name before saving"
-            )
-
-        else:
-
-            changed_rows = (
-                edited_df[
-                    [
-                        "Customer Status",
-                        "Remarks"
-                    ]
-                ]
-                .ne(
-                    df[
-                        [
-                            "Customer Status",
-                            "Remarks"
-                        ]
-                    ]
-                )
-                .any(axis=1)
-            )
+        save_data(
+            edited_df
+        )
 
 
-            edited_df.loc[
-                changed_rows,
-                "Updated By"
-            ] = user_name
-
-
-            edited_df.loc[
-                changed_rows,
-                "Updated Date"
-            ] = datetime.now().strftime(
-                "%Y-%m-%d %H:%M:%S"
-            )
-
-
-            save_data(
-                edited_df
-            )
-
-
-            st.success(
-                "Changes saved successfully"
-            )
+        st.success(
+            "Changes saved successfully"
+        )
 
 
     st.download_button(
