@@ -10,7 +10,7 @@ import os
 DATA_FOLDER = "data"
 DATA_FILE = os.path.join(DATA_FOLDER, "customer_review.csv")
 
-ADMIN_PASSWORD = "Admin@123"
+ADMIN_PASSWORD = "admin"
 
 
 STATUS_OPTIONS = [
@@ -85,26 +85,28 @@ def save_data(df):
 
 
 
+
+
 # ==========================================================
-# ADMIN MODE
+# ADMIN URL CHECK
 # ==========================================================
 
 params = st.query_params
 
+admin_mode = False
 
-admin_mode = (
-    "admin" in params
-    and params["admin"] == "true"
-)
-
-
-
+if "admin" in params:
+    if params["admin"] == "true":
+        admin_mode = True
 # ==========================================================
 # ADMIN UPLOAD
 # ==========================================================
 
-if admin_mode:
+# ==========================================================
+# ADMIN UPLOAD PAGE
+# ==========================================================
 
+if admin_mode:
 
     st.title("Admin - Upload Customer File")
 
@@ -115,73 +117,68 @@ if admin_mode:
     )
 
 
-    if password == ADMIN_PASSWORD:
+    if password:
+
+        if password == ADMIN_PASSWORD:
+
+            st.success("Admin Access Granted")
 
 
-        st.success(
-            "Admin Access Granted"
-        )
-
-
-        uploaded_file = st.file_uploader(
-            "Upload New Customer CSV",
-            type=["csv"]
-        )
-
-
-        if uploaded_file:
-
-
-            df = pd.read_csv(
-                uploaded_file
+            uploaded_file = st.file_uploader(
+                "Upload New Customer CSV",
+                type=["csv"]
             )
 
 
-            # Add editable columns only
+            if uploaded_file:
 
-            if "Customer Status" not in df.columns:
-                df["Customer Status"] = ""
-
-
-            if "Remarks" not in df.columns:
-                df["Remarks"] = ""
+                df_upload = pd.read_csv(
+                    uploaded_file
+                )
 
 
+                if "Customer Status" not in df_upload.columns:
+                    df_upload["Customer Status"] = ""
 
-            df["Customer Status"] = (
-                df["Customer Status"]
-                .fillna("")
-                .astype(str)
+
+                if "Remarks" not in df_upload.columns:
+                    df_upload["Remarks"] = ""
+
+
+                df_upload["Customer Status"] = (
+                    df_upload["Customer Status"]
+                    .fillna("")
+                    .astype(str)
+                )
+
+
+                df_upload["Remarks"] = (
+                    df_upload["Remarks"]
+                    .fillna("")
+                    .astype(str)
+                )
+
+
+                save_data(
+                    df_upload
+                )
+
+
+                st.success(
+                    "Customer file uploaded successfully"
+                )
+
+
+                st.dataframe(
+                    df_upload.head()
+                )
+
+
+        else:
+
+            st.error(
+                "Incorrect password"
             )
-
-
-            df["Remarks"] = (
-                df["Remarks"]
-                .fillna("")
-                .astype(str)
-            )
-
-
-            save_data(
-                df
-            )
-
-
-            st.success(
-                "Customer file uploaded successfully"
-            )
-
-
-            st.subheader(
-                "File Preview"
-            )
-
-
-            st.dataframe(
-                df.head(10)
-            )
-
-
 
 # ==========================================================
 # USER REVIEW
