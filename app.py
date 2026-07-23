@@ -3,12 +3,15 @@ import pandas as pd
 import os
 
 
-# -----------------------------
-# Configuration
-# -----------------------------
+# ==========================================================
+# CONFIGURATION
+# ==========================================================
 
 DATA_FOLDER = "data"
 DATA_FILE = os.path.join(DATA_FOLDER, "customer_review.csv")
+
+ADMIN_PASSWORD = "Admin@123"
+
 
 STATUS_OPTIONS = [
     "Customer Closed",
@@ -25,9 +28,10 @@ if not os.path.exists(DATA_FOLDER):
     os.makedirs(DATA_FOLDER)
 
 
-# -----------------------------
-# Page Setup
-# -----------------------------
+
+# ==========================================================
+# PAGE CONFIGURATION
+# ==========================================================
 
 st.set_page_config(
     page_title="Customer Review Tool",
@@ -35,9 +39,10 @@ st.set_page_config(
 )
 
 
-# -----------------------------
-# Helper Functions
-# -----------------------------
+
+# ==========================================================
+# FUNCTIONS
+# ==========================================================
 
 def load_data():
 
@@ -45,13 +50,16 @@ def load_data():
 
         df = pd.read_csv(DATA_FILE)
 
-        # Convert editable columns to text
+
+        # Ensure editable columns are text
+
         if "Customer Status" in df.columns:
             df["Customer Status"] = (
                 df["Customer Status"]
                 .fillna("")
                 .astype(str)
             )
+
 
         if "Remarks" in df.columns:
             df["Remarks"] = (
@@ -60,10 +68,11 @@ def load_data():
                 .astype(str)
             )
 
+
         return df
 
-    else:
-        return pd.DataFrame()
+
+    return pd.DataFrame()
 
 
 
@@ -75,92 +84,123 @@ def save_data(df):
     )
 
 
-# -----------------------------
-# Sidebar Navigation
-# -----------------------------
 
-page = st.sidebar.selectbox(
-    "Select Page",
-    [
-        "User Review",
-        "Admin Upload"
-    ]
+# ==========================================================
+# ADMIN MODE
+# ==========================================================
+
+params = st.query_params
+
+
+admin_mode = (
+    "admin" in params
+    and params["admin"] == "true"
 )
 
 
+
 # ==========================================================
-# ADMIN PAGE
+# ADMIN UPLOAD
 # ==========================================================
 
-if page == "Admin Upload":
+if admin_mode:
+
 
     st.title("Admin - Upload Customer File")
 
 
-    uploaded_file = st.file_uploader(
-        "Upload Customer CSV",
-        type=["csv"]
+    password = st.text_input(
+        "Admin Password",
+        type="password"
     )
 
 
-    if uploaded_file:
-
-        df = pd.read_csv(uploaded_file)
-
-
-        # Add required columns
-
-        if "Customer Status" not in df.columns:
-            df["Customer Status"] = ""
-
-
-        if "Remarks" not in df.columns:
-            df["Remarks"] = ""
-
-
-        # Convert editable columns to text
-
-        df["Customer Status"] = (
-            df["Customer Status"]
-            .fillna("")
-            .astype(str)
-        )
-
-
-        df["Remarks"] = (
-            df["Remarks"]
-            .fillna("")
-            .astype(str)
-        )
-
-
-        save_data(df)
+    if password == ADMIN_PASSWORD:
 
 
         st.success(
-            "Customer file uploaded successfully"
+            "Admin Access Granted"
         )
 
 
-        st.dataframe(
-            df.head()
+        uploaded_file = st.file_uploader(
+            "Upload New Customer CSV",
+            type=["csv"]
         )
+
+
+        if uploaded_file:
+
+
+            df = pd.read_csv(
+                uploaded_file
+            )
+
+
+            # Add editable columns only
+
+            if "Customer Status" not in df.columns:
+                df["Customer Status"] = ""
+
+
+            if "Remarks" not in df.columns:
+                df["Remarks"] = ""
+
+
+
+            df["Customer Status"] = (
+                df["Customer Status"]
+                .fillna("")
+                .astype(str)
+            )
+
+
+            df["Remarks"] = (
+                df["Remarks"]
+                .fillna("")
+                .astype(str)
+            )
+
+
+            save_data(
+                df
+            )
+
+
+            st.success(
+                "Customer file uploaded successfully"
+            )
+
+
+            st.subheader(
+                "File Preview"
+            )
+
+
+            st.dataframe(
+                df.head(10)
+            )
 
 
 
 # ==========================================================
-# USER PAGE
+# USER REVIEW
 # ==========================================================
 
-elif page == "User Review":
+else:
 
-    st.title("Customer Review")
+
+    st.title(
+        "Customer Review"
+    )
 
 
     df = load_data()
 
 
+
     if df.empty:
+
 
         st.warning(
             "No customer file available. Please contact Admin."
@@ -169,43 +209,61 @@ elif page == "User Review":
         st.stop()
 
 
+
     st.subheader(
         "Update Customer Status and Remarks"
     )
+
 
 
     edited_df = st.data_editor(
 
         df,
 
+
         height=600,
+
 
         column_config={
 
+
             "Customer Status":
             st.column_config.SelectboxColumn(
+
                 "Customer Status",
+
                 options=STATUS_OPTIONS,
+
                 required=False
+
             ),
+
 
 
             "Remarks":
             st.column_config.TextColumn(
+
                 "Remarks"
+
             )
 
         },
 
 
-        # Only these columns are editable
+        # Only allow editing these columns
 
         disabled=[
+
             col for col in df.columns
+
             if col not in [
+
                 "Customer Status",
+
                 "Remarks"
+
             ]
+
         ],
 
 
@@ -214,7 +272,10 @@ elif page == "User Review":
     )
 
 
-    if st.button("Save Changes"):
+
+    if st.button(
+        "Save Changes"
+    ):
 
 
         save_data(
@@ -227,9 +288,10 @@ elif page == "User Review":
         )
 
 
+
     st.download_button(
 
-        label="Download Latest CSV",
+        label="Download Updated CSV",
 
         data=edited_df.to_csv(index=False),
 
